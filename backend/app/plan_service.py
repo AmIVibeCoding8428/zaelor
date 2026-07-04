@@ -44,14 +44,6 @@ def build_plan(user_input: dict) -> dict:
     )
     years_to_retirement = asset_allocation["years_to_retirement"]
 
-    monte_carlo = monte_carlo_engine.run_monte_carlo_simulation(
-        allocations=asset_allocation["allocations"],
-        monthly_sip_amount=user_input["monthly_feasible_investment_amount"],
-        years_to_retirement=years_to_retirement,
-        target_corpus=user_input["target_retirement_corpus"],
-        existing_corpus=existing_corpus,
-    )
-
     sip_plan = sip_engine.calculate_sip_plan({
         "target_corpus": user_input["target_retirement_corpus"],
         "years_to_retirement": years_to_retirement,
@@ -61,6 +53,14 @@ def build_plan(user_input: dict) -> dict:
         "monthly_feasible_investment_amount": user_input["monthly_feasible_investment_amount"],
         "existing_corpus": existing_corpus,
     })
+
+    monte_carlo = monte_carlo_engine.run_monte_carlo_simulation(
+        allocations=asset_allocation["allocations"],
+        monthly_sip_amount=sip_plan["monthly_sip_required"]["total"],
+        years_to_retirement=years_to_retirement,
+        target_corpus=user_input["target_retirement_corpus"],
+        existing_corpus=existing_corpus,
+    )
 
     return {
         "currency": "INR",

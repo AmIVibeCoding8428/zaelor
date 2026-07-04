@@ -15,6 +15,11 @@ import numpy as np
 
 NUM_SIMULATIONS = 10_000
 
+# Fixed so identical inputs always produce identical output (deterministic *process*,
+# not deterministic in the sense of no randomness — the random draws themselves are
+# reproducible run to run).
+DEFAULT_SEED = 42
+
 # Percentile bands used for the best/worst-case chart lines.
 BEST_CASE_PERCENTILE = 90
 WORST_CASE_PERCENTILE = 10
@@ -89,7 +94,7 @@ def run_monte_carlo_simulation(
     target_corpus: float,
     existing_corpus: float = 0.0,
     num_simulations: int = NUM_SIMULATIONS,
-    seed: int = None,
+    seed: int = DEFAULT_SEED,
 ) -> dict:
     """Run the Monte Carlo retirement corpus simulation.
 

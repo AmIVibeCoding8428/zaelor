@@ -74,6 +74,23 @@ DISCLAIMER_STYLE = ParagraphStyle(
     "Disclaimer", parent=_styles["Normal"], fontName="Helvetica-Oblique",
     fontSize=8, textColor=SECONDARY_TEXT, leading=11,
 )
+TABLE_CELL_STYLE = ParagraphStyle(
+    "TableCell", parent=_styles["Normal"], fontName="Helvetica",
+    fontSize=8.5, textColor=BODY_TEXT, leading=11,
+)
+TABLE_HEADER_STYLE = ParagraphStyle(
+    "TableHeader", parent=_styles["Normal"], fontName="Helvetica-Bold",
+    fontSize=9, textColor=colors.black, leading=11,
+)
+
+
+def _cell(text) -> Paragraph:
+    """Wrap table cell text in a Paragraph so ReportLab wraps it instead of truncating it."""
+    return Paragraph(str(text), TABLE_CELL_STYLE)
+
+
+def _header_cell(text) -> Paragraph:
+    return Paragraph(str(text), TABLE_HEADER_STYLE)
 
 
 def _format_inr(amount) -> str:
@@ -95,7 +112,7 @@ def _format_inr(amount) -> str:
         if rest:
             parts.insert(0, rest)
         grouped = ",".join(parts) + "," + last_three
-    return f"{sign}₹{grouped}"
+    return f"{sign}Rs. {grouped}"
 
 
 def _cover_section(generated_on: str) -> list:
@@ -171,14 +188,14 @@ def _allocation_table_section(plan: dict) -> list:
         "Cash": "4%",
     }
 
-    header = ["Asset", "Allocation %", "Monthly SIP", "Expected Return"]
+    header = [_header_cell(h) for h in ("Asset", "Allocation %", "Monthly SIP", "Expected Return")]
     rows = [header]
     for asset, pct in allocations.items():
         rows.append([
-            asset,
-            f"{pct}%",
-            _format_inr(sip_by_asset.get(asset, 0)),
-            expected_returns.get(asset, "N/A"),
+            _cell(asset),
+            _cell(f"{pct}%"),
+            _cell(_format_inr(sip_by_asset.get(asset, 0))),
+            _cell(expected_returns.get(asset, "N/A")),
         ])
 
     table = Table(rows, colWidths=[5 * cm, 3 * cm, 4.5 * cm, 3.5 * cm], repeatRows=1)
@@ -203,17 +220,17 @@ def _tax_accounts_section(plan: dict) -> list:
     tax_and_accounts = plan.get("tax_and_accounts", {})
     accounts = tax_and_accounts.get("recommended_accounts", [])
 
-    header = ["Account", "Recommended", "Repatriation", "Reason"]
+    header = [_header_cell(h) for h in ("Account", "Recommended", "Repatriation", "Reason")]
     rows = [header]
     for account in accounts:
         rows.append([
-            f"{account.get('account_type')} ({account.get('full_name', '')})",
-            "Yes" if account.get("recommended") else "Optional",
-            account.get("repatriation", ""),
-            account.get("reason", ""),
+            _cell(f"{account.get('account_type')} ({account.get('full_name', '')})"),
+            _cell("Yes" if account.get("recommended") else "Optional"),
+            _cell(account.get("repatriation", "")),
+            _cell(account.get("reason", "")),
         ])
 
-    table = Table(rows, colWidths=[4 * cm, 2.5 * cm, 4 * cm, 5.5 * cm], repeatRows=1)
+    table = Table(rows, colWidths=[3.5 * cm, 2 * cm, 4.5 * cm, 6.5 * cm], repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), GOLD),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
