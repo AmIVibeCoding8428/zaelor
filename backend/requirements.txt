@@ -5,3 +5,4 @@ anthropic==0.34.2
 reportlab==4.2.2
 numpy==1.26.4
 gunicorn==22.0.0
+pytest==8.4.2
