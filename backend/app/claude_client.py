@@ -32,4 +32,5 @@ def generate_wealth_memo(structured_plan: dict) -> str:
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": json.dumps(structured_plan)}],
     )
-    return response.content[0].text
+    text_blocks = [block.text for block in response.content if block.type == "text"]
+    return "".join(text_blocks)

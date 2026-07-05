@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-card: #111111;
-  --color-gold: #c8a24c;
-  --color-text: #f5f5f5;
-  --color-secondary: #a1a1a1;
+  --color-background: #080808;
+  --color-card: #0f0f0f;
+  --color-gold: #c9a34e;
+  --color-text: #ffffff;
+  --color-secondary: #9a9a9a;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -16,4 +16,34 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Restrained gold underglow — used only behind the wordmark, never as fill. */
+.gold-underglow {
+  background: radial-gradient(closest-side, rgba(201, 163, 78, 0.35), transparent 72%);
+  filter: blur(40px);
+}
+
+/* Very subtle glass surface — KPI cards only, see CLAUDE.md. */
+.glass-surface {
+  background-color: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
 }

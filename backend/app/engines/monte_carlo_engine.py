@@ -64,7 +64,9 @@ def _allocation_weights(allocations: dict) -> np.ndarray:
     return np.array([allocations.get(asset_class, 0) / 100 for asset_class in ASSET_CLASSES])
 
 
-def _simulate_portfolio_values(weights, years, num_simulations, existing_corpus, annual_contribution, seed):
+def _simulate_portfolio_values(
+    weights, years, num_simulations, existing_corpus, annual_contribution, seed, annual_step_up_pct=0.0
+):
     rng = np.random.default_rng(seed)
 
     means = np.array([ASSET_CLASS_ASSUMPTIONS[c]["expected_return"] for c in ASSET_CLASSES])
@@ -79,9 +81,11 @@ def _simulate_portfolio_values(weights, years, num_simulations, existing_corpus,
     values[:, 0] = existing_corpus
     for year in range(1, years + 1):
         year_return = portfolio_returns[:, year - 1]
+        # Contribution grows by the step-up rate each year (year 1 = base amount).
+        year_contribution = annual_contribution * (1 + annual_step_up_pct) ** (year - 1)
         values[:, year] = (
             values[:, year - 1] * (1 + year_return)
-            + annual_contribution * (1 + year_return) ** 0.5
+            + year_contribution * (1 + year_return) ** 0.5
         )
 
     return values[:, 1:]  # drop year 0 (starting point), keep one column per simulated year
@@ -95,16 +99,19 @@ def run_monte_carlo_simulation(
     existing_corpus: float = 0.0,
     num_simulations: int = NUM_SIMULATIONS,
     seed: int = DEFAULT_SEED,
+    annual_step_up_pct: float = 0.0,
 ) -> dict:
     """Run the Monte Carlo retirement corpus simulation.
 
     allocations: dict of asset class -> percentage (as returned by
         allocation_engine.generate_asset_allocation()["allocations"]).
-    monthly_sip_amount: monthly contribution amount, in the same currency as
-        target_corpus (INR).
+    monthly_sip_amount: monthly contribution amount in year 1, in the same
+        currency as target_corpus (INR).
     years_to_retirement: simulation horizon in years.
     target_corpus: the INR corpus the user wants to hit by retirement.
     existing_corpus: starting portfolio value, if any.
+    annual_step_up_pct: fraction (e.g. 0.05 for 5%) by which the monthly SIP
+        grows each year. 0.0 keeps contributions flat (original behavior).
     """
     years = max(int(years_to_retirement), 0)
 
@@ -118,6 +125,7 @@ def run_monte_carlo_simulation(
             "final_median_corpus": existing_corpus,
             "num_simulations": num_simulations,
             "years_to_retirement": 0,
+            "annual_step_up_pct": annual_step_up_pct,
             "assumptions": _assumptions_block(num_simulations),
         }
 
@@ -125,7 +133,7 @@ def run_monte_carlo_simulation(
     annual_contribution = monthly_sip_amount * 12
 
     values = _simulate_portfolio_values(
-        weights, years, num_simulations, existing_corpus, annual_contribution, seed
+        weights, years, num_simulations, existing_corpus, annual_contribution, seed, annual_step_up_pct
     )
 
     final_values = values[:, -1]
@@ -143,6 +151,7 @@ def run_monte_carlo_simulation(
         "final_median_corpus": float(median_case[-1]),
         "num_simulations": num_simulations,
         "years_to_retirement": years,
+        "annual_step_up_pct": annual_step_up_pct,
         "assumptions": _assumptions_block(num_simulations),
     }
 

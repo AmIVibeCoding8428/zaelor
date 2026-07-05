@@ -3,7 +3,9 @@ import math
 from app.engines.sip_engine import (
     calculate_sip_plan,
     _achievable_corpus,
+    _achievable_corpus_with_stepup,
     _required_monthly_sip,
+    _required_monthly_sip_with_stepup,
     _weighted_annual_return,
 )
 
@@ -133,3 +135,38 @@ def test_existing_corpus_alone_sufficient_means_zero_sip():
 
     assert result["monthly_sip_required"]["total"] == 0.0
     assert result["feasibility_status"] == "on_track"
+
+
+def test_stepup_starting_sip_is_lower_than_flat_sip_for_same_target():
+    result = calculate_sip_plan(_base_input())
+
+    step_up = result["sip_step_up"]
+    assert step_up["annual_step_up_pct"] == 5.0
+    assert step_up["flat_monthly_sip_required"] == result["monthly_sip_required"]["total"]
+    assert step_up["starting_monthly_sip"] < result["monthly_sip_required"]["total"]
+
+
+def test_stepup_sip_still_reaches_target_corpus():
+    annual_return = _weighted_annual_return(MODERATE_ALLOCATION)
+    stepup_sip = _required_monthly_sip_with_stepup(50_000_000, 0, annual_return, 25, 0.05)
+
+    achieved = _achievable_corpus_with_stepup(stepup_sip, 0, annual_return, 25, 0.05)
+    assert math.isclose(achieved, 50_000_000, rel_tol=1e-4)
+
+
+def test_zero_stepup_matches_flat_calculation_exactly():
+    annual_return = _weighted_annual_return(MODERATE_ALLOCATION)
+
+    flat_sip = _required_monthly_sip(50_000_000, 0, annual_return, 25)
+    stepup_sip_at_zero_pct = _required_monthly_sip_with_stepup(50_000_000, 0, annual_return, 25, 0.0)
+
+    assert math.isclose(flat_sip, stepup_sip_at_zero_pct, rel_tol=1e-9)
+
+
+def test_higher_stepup_pct_lowers_the_required_starting_sip():
+    annual_return = _weighted_annual_return(MODERATE_ALLOCATION)
+
+    low_stepup = _required_monthly_sip_with_stepup(50_000_000, 0, annual_return, 25, 0.03)
+    high_stepup = _required_monthly_sip_with_stepup(50_000_000, 0, annual_return, 25, 0.08)
+
+    assert high_stepup < low_stepup

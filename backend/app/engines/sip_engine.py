@@ -14,6 +14,11 @@ from app.engines.monte_carlo_engine import ASSET_CLASS_ASSUMPTIONS
 # fall back to suggesting a lower, achievable corpus at the original horizon.
 MAX_EXTRA_YEARS = 20
 
+# Default annual SIP step-up — the client is expected to raise their monthly
+# contribution by this fraction every year (e.g. with each pay raise) rather
+# than investing a flat amount for the whole horizon.
+DEFAULT_ANNUAL_STEP_UP_PCT = 0.05
+
 
 def _weighted_annual_return(allocations: dict) -> float:
     return sum(
@@ -52,6 +57,45 @@ def _achievable_corpus(monthly_sip, existing_corpus, annual_return, years):
     )
 
 
+def _stepup_future_value_factor(monthly_rate, annual_return, years, step_up_pct):
+    """Future value, per unit of year-1 monthly SIP, of `years` years of monthly
+    contributions that grow by `step_up_pct` at the start of each year.
+
+    Each year's 12 monthly contributions are first grown to a year-end value
+    via the ordinary monthly annuity factor, then that year-end lump sum is
+    compounded at the annual rate for the remaining years. Because
+    (1 + monthly_rate)**12 == (1 + annual_return) by construction, this is
+    exactly equivalent to (not an approximation of) continuous monthly
+    compounding — setting step_up_pct=0 reproduces `_future_value_factor`
+    applied to the full monthly horizon.
+    """
+    if years <= 0:
+        return 0.0
+    factor_12 = _future_value_factor(monthly_rate, 12)
+    return sum(
+        (1 + step_up_pct) ** year_index * (1 + annual_return) ** (years - 1 - year_index)
+        for year_index in range(years)
+    ) * factor_12
+
+
+def _required_monthly_sip_with_stepup(target_corpus, existing_corpus, annual_return, years, step_up_pct):
+    monthly_rate = _monthly_rate(annual_return)
+    corpus_from_existing = existing_corpus * (1 + annual_return) ** years
+    remaining_target = target_corpus - corpus_from_existing
+    if remaining_target <= 0:
+        return 0.0
+    factor = _stepup_future_value_factor(monthly_rate, annual_return, years, step_up_pct)
+    if factor <= 0:
+        return 0.0
+    return remaining_target / factor
+
+
+def _achievable_corpus_with_stepup(monthly_sip_year1, existing_corpus, annual_return, years, step_up_pct):
+    monthly_rate = _monthly_rate(annual_return)
+    factor = _stepup_future_value_factor(monthly_rate, annual_return, years, step_up_pct)
+    return existing_corpus * (1 + annual_return) ** years + monthly_sip_year1 * factor
+
+
 def _split_sip_by_allocation(total_sip: float, allocations: dict) -> dict:
     breakdown = {
         asset_class: round(total_sip * pct / 100, 2)
@@ -78,7 +122,7 @@ def _find_feasible_extension(target_corpus, existing_corpus, annual_return, year
     return None, None
 
 
-def calculate_sip_plan(user_input: dict) -> dict:
+def calculate_sip_plan(user_input: dict, annual_step_up_pct: float = DEFAULT_ANNUAL_STEP_UP_PCT) -> dict:
     """Calculate the required monthly SIP and check it against the user's budget.
 
     Expected keys in user_input:
@@ -89,6 +133,12 @@ def calculate_sip_plan(user_input: dict) -> dict:
         monthly_expenses (float)
         monthly_feasible_investment_amount (float): user's self-declared budget.
         existing_corpus (float, optional): current investable assets.
+
+    annual_step_up_pct: fraction (e.g. 0.05 for 5%) by which the client is
+        recommended to raise their SIP every year. `monthly_sip_required`
+        stays the flat-SIP figure (unchanged behavior); the step-up
+        alternative is surfaced separately under `sip_step_up`, since a
+        growing SIP reaches the same target from a lower starting amount.
     """
     target_corpus = user_input["target_corpus"]
     years = int(user_input["years_to_retirement"])
@@ -103,10 +153,21 @@ def calculate_sip_plan(user_input: dict) -> dict:
     required_sip = _required_monthly_sip(target_corpus, existing_corpus, annual_return, years)
     required_sip = round(required_sip, 2)
 
+    stepup_starting_sip = round(
+        _required_monthly_sip_with_stepup(target_corpus, existing_corpus, annual_return, years, annual_step_up_pct),
+        2,
+    )
+
     result = {
         "monthly_sip_required": {
             "total": required_sip,
             "by_asset_class": _split_sip_by_allocation(required_sip, allocations),
+        },
+        "sip_step_up": {
+            "annual_step_up_pct": round(annual_step_up_pct * 100, 2),
+            "starting_monthly_sip": stepup_starting_sip,
+            "by_asset_class": _split_sip_by_allocation(stepup_starting_sip, allocations),
+            "flat_monthly_sip_required": required_sip,
         },
         "weighted_expected_annual_return": round(annual_return, 4),
         "monthly_surplus": round(monthly_income - monthly_expenses, 2),

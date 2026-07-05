@@ -36,20 +36,20 @@ from flask_cors import CORS
 CORS(app, origins=["https://your-vercel-url.vercel.app"])
 ```
 
-## Visual direction — premium private banking portal, NOT a trading/crypto dashboard
-**Exact palette (do not deviate, single gold accent only):**
-- Background: `#0A0A0A`
-- Cards: `#111111`
-- Gold accent: `#C8A24C`
-- Text: `#F5F5F5`
-- Secondary text: `#A1A1A1`
+## Visual direction — quiet-confidence luxury fintech, NOT a trading/crypto dashboard
+**Exact palette (do not deviate, gold used sparingly, white is the primary text color):**
+- Background: `#080808`
+- Cards: `#0F0F0F`
+- Gold accent: `#C9A34E` — reserved ONLY for: the wordmark's subtle underglow accent, the CTA button, and key numbers/metrics (KPI values, gold line in charts). Gold is rare everywhere else.
+- Text (primary): `#FFFFFF`
+- Secondary text: `#9A9A9A`
 
-**Font:** One family only — Inter or Satoshi.
+**Font:** One family, app-wide, no exceptions — **Sora**, loaded via the Google Fonts `<link>` in `frontend/index.html` and set as `--font-sans` in `frontend/src/index.css`. There is no separate display font for the wordmark anymore: the "Zaelor" wordmark renders in Sora at a large, bold, tightly-tracked weight, with a restrained gold radial underglow (`.gold-underglow` in `index.css`) behind it rather than the wordmark itself being solid gold or two-tone. (The earlier Archivo Black display-font exception and the two-tone "Zael**o**r" treatment are retired — do not reintroduce them.)
 
 **Design brief to follow:**
-"Do not design this like a trading dashboard. Design it like a premium private banking portal. Use generous whitespace, strong visual hierarchy, large typography for key metrics, subtle gold accents, minimal borders, soft shadows, and smooth Motion animations. Every component should prioritize readability over decoration."
+"Quiet confidence. Old money meets modern technology. Luxury through restraint." Near-pure black background, white as the primary text color, gold used sparingly and deliberately. Extremely generous whitespace, minimal borders (`border-white/[0.06]` rather than `border-white/10`), subtle shadows, soft radial lighting, smooth premium animation, zero clutter. Typography is the hero — very large, bold, elegant headline treatment with tight tracking.
 
-References: Apple (spacing), Linear (clean cards), Bloomberg (finance density where needed), Julius Baer/Rothschild (luxury feel). Explicitly avoid: crypto/trading dashboard tropes (glowing green/red, dense tickers, network-mesh graphics, Web3 nav items like "Smart Contracts"/"Whitepaper").
+References: Apple, Linear, Vercel, Raycast, Notion AI, Goldman Sachs Private Wealth, luxury car configurators (Ferrari/Aston Martin/Porsche). Explicitly avoid: crypto/trading dashboard tropes (glowing green/red, dense tickers, network-mesh graphics, Web3 nav items like "Smart Contracts"/"Whitepaper"), and avoid a typical card-heavy SaaS landing page feel.
 
 ## Layout
 **Sidebar:** Dashboard, Profile Summary, Asset Allocation, SIP Planner, Monte Carlo Analysis, Tax & FEMA, Reports. Include a "100% Anonymous / No login / No personal data" trust badge.
@@ -69,12 +69,13 @@ References: Apple (spacing), Linear (clean cards), Bloomberg (finance density wh
 **Quick Insights panel:** Advisory-style takeaways, e.g. "Increase SIP by ₹X/month to improve probability to Y%" — generated from deterministic logic + Claude prose, not invented by Claude.
 
 ## Homepage (keep minimal — this is a tool, not a SaaS marketing site)
-1. Hero: "Zaelor" wordmark + "Wealth beyond borders." tagline
-2. 3 feature cards: tax-aware allocation, Monte Carlo probability, no-login privacy
-3. Dashboard preview (shown large — don't undersell it)
-4. One CTA: "Generate Wealth Plan"
+Cinematic, minimal, restrained — not a typical card-heavy SaaS landing page.
+1. **Hero:** large centered "ZAELOR" wordmark (Sora, bold, tight tracking) + "Wealth Beyond Borders." subtitle + "AI-powered cross-border wealth planning for global Indians." supporting line + ONE gold-filled CTA ("Generate Wealth Plan", glow only on hover). Behind it: a soft, slow-drifting gold mesh, subtle floating gold particles, and a radial gold underglow behind the wordmark — alive but never distracting. Load sequence: background → logo → subtitle → CTA → mesh/particles ambient loop, no sudden movements.
+2. **Three-pillar section** (replaces the old 3 feature cards — no card borders/backgrounds): large-typography Apple-product-page-style rows for Tax-Aware Allocation / Monte Carlo Simulation / Cross-Border Wealth Planning, each with an index number, a big heading, and one line of supporting copy.
+3. Dashboard preview (shown large in a browser-frame mockup, real Dashboard components with sample data — don't undersell it)
+4. One CTA repeated: "Generate Wealth Plan"
 
-No testimonials, no full marketing site, no Web3-style nav.
+No testimonials, no full marketing site, no Web3-style nav, no feature cards.
 
 ## Animation polish (once core logic works — don't front-load this)
 - Donut chart draws in on load

@@ -112,6 +112,24 @@ def test_existing_corpus_below_target_at_zero_years_fails():
     assert result["probability_of_success"] == 0.0
 
 
+def test_stepup_contribution_produces_higher_final_corpus_than_flat():
+    common_kwargs = dict(
+        allocations=MODERATE_ALLOCATION,
+        monthly_sip_amount=40_000,
+        years_to_retirement=25,
+        target_corpus=50_000_000,
+        num_simulations=3_000,
+        seed=11,
+    )
+
+    flat = run_monte_carlo_simulation(annual_step_up_pct=0.0, **common_kwargs)
+    stepped_up = run_monte_carlo_simulation(annual_step_up_pct=0.05, **common_kwargs)
+
+    assert stepped_up["final_median_corpus"] > flat["final_median_corpus"]
+    assert stepped_up["annual_step_up_pct"] == 0.05
+    assert flat["annual_step_up_pct"] == 0.0
+
+
 def test_assumptions_block_exposes_named_constants():
     result = run_monte_carlo_simulation(
         allocations=MODERATE_ALLOCATION,
