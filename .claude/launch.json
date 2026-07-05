@@ -11,7 +11,7 @@
     {
       "name": "backend",
       "runtimeExecutable": "backend/venv/bin/python",
-      "runtimeArgs": ["backend/app.py"],
+      "runtimeArgs": ["backend/wsgi.py"],
       "port": 5001
     }
   ]
