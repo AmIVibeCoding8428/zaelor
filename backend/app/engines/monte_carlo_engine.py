@@ -69,26 +69,41 @@ def _simulate_portfolio_values(
 ):
     rng = np.random.default_rng(seed)
 
-    means = np.array([ASSET_CLASS_ASSUMPTIONS[c]["expected_return"] for c in ASSET_CLASSES])
-    stds = np.array([ASSET_CLASS_ASSUMPTIONS[c]["volatility"] for c in ASSET_CLASSES])
+    # float32 throughout: halves memory versus float64, and the stochastic
+    # noise in a Monte Carlo simulation swamps float32's precision loss many
+    # times over, so results are statistically equivalent.
+    means = np.array([ASSET_CLASS_ASSUMPTIONS[c]["expected_return"] for c in ASSET_CLASSES], dtype=np.float32)
+    stds = np.array([ASSET_CLASS_ASSUMPTIONS[c]["volatility"] for c in ASSET_CLASSES], dtype=np.float32)
+    weights = weights.astype(np.float32, copy=False)
 
-    asset_returns = rng.normal(loc=means, scale=stds, size=(num_simulations, years, len(ASSET_CLASSES)))
-    asset_returns = np.clip(asset_returns, MIN_ANNUAL_ASSET_RETURN, None)
+    # Drawn one year at a time into a reused (num_simulations, num_assets)
+    # buffer, rather than pre-allocating the full (num_simulations, years,
+    # num_assets) tensor up front. Peak memory then stays roughly constant
+    # regardless of the retirement horizon's length instead of scaling with
+    # it — for a 25-year-old targeting a 65-year retirement (40 years) at
+    # 10,000 simulations, the old float64 tensor was ~77MB (plus a further
+    # transient ~77MB copy from np.clip's out-of-place default), which,
+    # multiplied across the ~35 sequential calls the retirement-age search
+    # makes in a single request, was the likely source of the OOM kills on
+    # Render's memory-constrained free tier.
+    asset_returns = np.empty((num_simulations, len(ASSET_CLASSES)), dtype=np.float32)
 
-    portfolio_returns = asset_returns @ weights  # shape: (num_simulations, years)
+    current_values = np.full(num_simulations, existing_corpus, dtype=np.float32)
+    values = np.empty((num_simulations, years), dtype=np.float32)
 
-    values = np.zeros((num_simulations, years + 1))
-    values[:, 0] = existing_corpus
-    for year in range(1, years + 1):
-        year_return = portfolio_returns[:, year - 1]
-        # Contribution grows by the step-up rate each year (year 1 = base amount).
-        year_contribution = annual_contribution * (1 + annual_step_up_pct) ** (year - 1)
-        values[:, year] = (
-            values[:, year - 1] * (1 + year_return)
-            + year_contribution * (1 + year_return) ** 0.5
-        )
+    for year in range(years):
+        rng.standard_normal(size=asset_returns.shape, dtype=np.float32, out=asset_returns)
+        asset_returns *= stds
+        asset_returns += means
+        np.clip(asset_returns, MIN_ANNUAL_ASSET_RETURN, None, out=asset_returns)
 
-    return values[:, 1:]  # drop year 0 (starting point), keep one column per simulated year
+        year_return = asset_returns @ weights  # shape: (num_simulations,)
+        # Contribution grows by the step-up rate each year (year 0 = base amount).
+        year_contribution = annual_contribution * (1 + annual_step_up_pct) ** year
+        current_values = current_values * (1 + year_return) + year_contribution * (1 + year_return) ** 0.5
+        values[:, year] = current_values
+
+    return values
 
 
 def run_monte_carlo_simulation(

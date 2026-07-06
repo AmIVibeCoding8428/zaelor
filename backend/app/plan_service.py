@@ -54,9 +54,17 @@ def build_plan(user_input: dict) -> dict:
         "existing_corpus": existing_corpus,
     })
 
+    # Simulated against the client's stated *feasible* SIP, not the required
+    # SIP. The required SIP is itself back-solved to land almost exactly on
+    # the target under the average expected return, so simulating with it
+    # would tautologically cluster near ~50% regardless of age, corpus, or
+    # horizon — it tells you nothing about this specific client's plan. The
+    # feasible SIP is the contribution they actually intend to make, so this
+    # is the number that should vary meaningfully (and does: from 0% for a
+    # hopelessly underfunded plan to 100% for an overfunded one).
     monte_carlo = monte_carlo_engine.run_monte_carlo_simulation(
         allocations=asset_allocation["allocations"],
-        monthly_sip_amount=sip_plan["monthly_sip_required"]["total"],
+        monthly_sip_amount=user_input["monthly_feasible_investment_amount"],
         years_to_retirement=years_to_retirement,
         target_corpus=user_input["target_retirement_corpus"],
         existing_corpus=existing_corpus,
